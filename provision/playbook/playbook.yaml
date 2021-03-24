@@ -1,0 +1,77 @@
+---
+- name: update apt packages
+  hosts: all
+
+  tasks:
+    - name: apt-get update
+      become: yes
+      apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+
+- name: setup network time
+  hosts: all
+
+  tasks:
+    - name: ensure ntpd is at the latest version
+      become: yes
+      apt: name=ntp state=latest
+      notify:
+        - restart ntp
+
+  handlers:
+    - name: restart ntp
+      become: yes
+      service: name=ntp state=restarted
+
+- name: prepare Riak environment
+  hosts: riak_nodes
+
+  tasks:
+    - name: install apt-transport-https
+      become: yes
+      apt: name=apt-transport-https state=latest
+
+    - name: operating system tuning
+      become: yes
+      script: ubuntu-os-tuning.sh
+
+- name: setup Riak cluster
+  hosts: riak_nodes
+
+  tasks:
+    - name: download Riak package
+      become: yes
+      copy:
+        src: '{{ riak_package }}'
+        dest: /tmp/riak_ee.deb
+        mode: '0700'
+
+    - name: install Riak
+      become: yes
+      script: ubuntu-os-riak-install.sh
+      environment:
+        RIAK_NAME: '{{ riak_name }}'
+        RIAK_IP: '{{ riak_ip }}'
+        RIAK_PB_PORT: '{{ riak_pb_port }}'
+        RIAK_HTTP_PORT: '{{ riak_http_port }}'
+        DISTRIBUTED_COOKIE: '{{ distributed_cookie }}'
+      notify:
+        - start Riak
+
+    - name: cleanup downloaded Riak package
+      become: yes
+      file:
+        path: /tmp/riak_ee.deb
+        state: absent
+
+  handlers:
+    - name: start Riak
+      become: yes
+      service: name=riak state=restarted
+
+- name: clean up
+  hosts: all
+
+  tasks:
+    - name: cleanup apt
+      become: yes
+      apt: autoremove=true autoclean=true

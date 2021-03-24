@@ -1,0 +1,26 @@
+---
+all:
+  hosts:
+    riak01:
+      ansible_host: 192.168.33.11
+      ansible_ssh_private_key_file: .vagrant/machines/riak01/virtualbox/private_key
+    riak02:
+      ansible_host: 192.168.33.12
+      ansible_ssh_private_key_file: .vagrant/machines/riak02/virtualbox/private_key
+    riak03:
+      ansible_host: 192.168.33.13
+      ansible_ssh_private_key_file: .vagrant/machines/riak03/virtualbox/private_key
+    riak04:
+      ansible_host: 192.168.33.14
+      ansible_ssh_private_key_file: .vagrant/machines/riak04/virtualbox/private_key
+  children:
+    riak_nodes:
+      hosts:
+        riak0[1:4]:
+      children:
+        cluster_1:
+          hosts:
+            riak0[1:2]:
+        cluster_2:
+          hosts:
+            riak0[3:4]:
